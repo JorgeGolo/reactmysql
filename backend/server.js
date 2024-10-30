@@ -44,6 +44,35 @@ app.get('/api/temas', (req, res) => {
   });
 });
 
+app.post('/api/preguntas', (req, res) => {
+    const { pregunta, temaId, respuestas, respuestaCorrecta } = req.body;
+
+    // Verificar si la pregunta ya existe
+    const checkQuery = 'SELECT * FROM preguntas WHERE pregunta = ? AND id_tema = ?';
+    db.query(checkQuery, [pregunta, temaId], (checkError, checkResults) => {
+        if (checkError) {
+            console.error('Error al verificar la pregunta:', checkError);
+            return res.status(500).json({ message: 'Error al verificar la pregunta' });
+        }
+
+        if (checkResults.length > 0) {
+            return res.status(400).json({ message: 'La pregunta ya existe para este tema' });
+        }
+
+        // Si no existe, proceder a insertar
+        const query = 'INSERT INTO preguntas (pregunta, id_tema, respuesta_1, respuesta_2, respuesta_3, respuesta_4, respuesta_correcta) VALUES (?, ?, ?, ?, ?, ?, ?)';
+        db.query(query, [pregunta, temaId, respuestas[0], respuestas[1], respuestas[2], respuestas[3], respuestaCorrecta], (error, results) => {
+            if (error) {
+                console.error('Error al insertar la pregunta:', error);
+                res.status(500).json({ message: 'Error al agregar la pregunta' });
+            } else {
+                res.status(201).json({ id: results.insertId, pregunta, temaId, respuestas, respuestaCorrecta });
+            }
+        });
+    });
+});
+
+
 // Endpoint para agregar un nuevo tema
 app.post('/api/temas', (req, res) => {
     const { nombre } = req.body;
@@ -62,4 +91,23 @@ app.post('/api/temas', (req, res) => {
 // Iniciar el servidor
 app.listen(5000, () => {
     console.log('Servidor backend corriendo en http://localhost:5000');
+});
+
+// Ruta para obtener preguntas por temaId
+app.get('/api/preguntas/:temaId', (req, res) => {
+    const temaId = req.params.temaId; // Obtén el ID del tema de los parámetros de la ruta
+    const sql = 'SELECT * FROM preguntas WHERE id_tema = ?'; // Consulta para obtener las preguntas
+
+    db.query(sql, [temaId], (err, results) => {
+        if (err) {
+            console.error('Error al obtener preguntas:', err);
+            return res.status(500).json({ message: 'Error al obtener preguntas' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'No se encontraron preguntas para este tema' });
+        }
+
+        res.json(results); // Devuelve las preguntas encontradas
+    });
 });
