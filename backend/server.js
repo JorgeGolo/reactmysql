@@ -5,10 +5,19 @@ console.log(process.env.DB_HOST, process.env.DB_USER, process.env.DB_PASSWORD, p
 const express = require('express');
 const mysql = require('mysql');
 const cors = require('cors');
+const { OpenAI, Configuration } = require('openai');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+
+const openai = new OpenAI({
+    apiKey: process.env['OPENAI_API_KEY'],
+  });
+
+
+
 
 // Configura la conexión con MySQL
 const db = mysql.createConnection({
@@ -18,6 +27,15 @@ const db = mysql.createConnection({
     database: process.env.DB_NAME,
 });
 
+app.post('/api/test-openai', async (req, res) => {
+    try {
+        const response = await openai.listModels();
+        res.json(response.data);
+    } catch (error) {
+        console.error('Error al conectar con OpenAI:', error);
+        res.status(500).json({ error: 'Error de conexión a OpenAI' });
+    }
+});
 // Conectar a la base de datos
 db.connect((err) => {
     if (err) {
@@ -25,6 +43,51 @@ db.connect((err) => {
         process.exit(1); // Finaliza el proceso si falla la conexión
     }
     console.log('Conectado a la base de datos de MySQL');
+});
+
+// Ruta para las preguntas para OpenAI
+app.post('/api/generate', async (req, res) => {
+    const { modelo, temaNombre } = req.body; // Recibir el modelo y tema del frontend
+
+    try {
+        // Llamada a la API de OpenAI para generar la pregunta
+        const chatCompletion = await openai.chat.completions.create({
+            model: modelo || "gpt-4", // Usa el modelo proporcionado por el usuario o gpt-4 por defecto
+            messages: [
+                { role: "system", content: "Eres un asistente útil que genera preguntas de quiz con cuatro opciones de respuesta." },
+                { role: "user", content: `Genera una pregunta sobre ${temaNombre} con cuatro posibles respuestas. Agrega la respuesta correcta en otra línea.` }
+            ],
+        });
+
+        // Imprimir la respuesta completa para depuración
+        console.log('Respuesta de la API:', chatCompletion);
+
+        // Verificar si la respuesta tiene la estructura esperada
+        if (!chatCompletion || !chatCompletion.choices || chatCompletion.choices.length === 0) {
+            throw new Error('No se recibieron opciones de la API de OpenAI.');
+        }
+
+        const generatedText = chatCompletion.choices[0].message.content;
+
+        // Extraemos la pregunta y respuestas desde el texto generado
+        const [question, ...answers] = generatedText.split('\n').filter(line => line.trim());
+
+        // Suponiendo que la respuesta correcta se coloca en la última línea
+        const correctAnswer = answers.pop(); // Extraer la respuesta correcta
+
+        // Enviar la pregunta y respuestas al frontend
+        res.json({
+            pregunta: question,
+            respuesta_1: answers[0] || '',
+            respuesta_2: answers[1] || '',
+            respuesta_3: answers[2] || '',
+            respuesta_4: answers[3] || '',
+            respuesta_correcta: correctAnswer || '' // Incluir la respuesta correcta
+        });
+    } catch (error) {
+        console.error('Error al generar la pregunta:', error);
+        res.status(500).json({ error: error.message || 'Error al generar la pregunta' });
+    }
 });
 
 // Rutas de prueba

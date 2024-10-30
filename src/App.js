@@ -68,7 +68,6 @@ function App() {
     setSelectedTemaId(temaId);
     setShowAddPregunta(false);
     setShowGenerarPregunta(false); // Oculta GenerarPregunta al agregar una pregunta
-
     await fetchPreguntas(temaId);
   };
 
