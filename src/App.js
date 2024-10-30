@@ -1,23 +1,35 @@
-import logo from './logo.svg';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import './App.css';
 
 function App() {
+  const [temas, setTemas] = useState([]);
+
+  useEffect(() => {
+    // Ejemplo con fetch para obtener un texto
+    fetch('http://localhost:5000/api/test')
+      .then((response) => response.text())
+      .then((data) => console.log("Respuesta de /api/test:", data))
+      .catch((error) => console.error('Error en fetch:', error));
+
+    // Ejemplo con axios para obtener la lista de temas
+    axios.get('http://localhost:5000/api/temas')
+      .then((response) => {
+        setTemas(response.data); // Guardamos los datos en el estado
+      })
+      .catch((error) => {
+        console.error('Error al obtener temas con axios:', error);
+      });
+  }, []);
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      {/*<span>Temas</span>*/}
+      <ul>
+        {temas.map((tema) => (
+          <li key={tema.id}>{tema.nombre}</li>
+        ))}
+      </ul>
     </div>
   );
 }
