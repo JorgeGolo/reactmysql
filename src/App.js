@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import './App.css';
 
+import AddTema from './AddTema'; // Importa el nuevo componente
+
+
 function App() {
   const [temas, setTemas] = useState([]);
 
@@ -22,6 +25,11 @@ function App() {
       });
   }, []);
 
+  // Función para agregar un nuevo tema al estado
+  const addTema = (tema) => {
+    setTemas([...temas, tema]); // Agrega el tema del backend al estado
+  };
+
   return (
     <div className="App">
       {/*<span>Temas</span>*/}
@@ -29,6 +37,7 @@ function App() {
         {temas.map((tema) => (
           <li key={tema.id}>{tema.nombre}</li>
         ))}
+          <li><AddTema onAddTema={addTema} /></li> {/* Incluye el componente de agregar tema */}
       </ul>
     </div>
   );

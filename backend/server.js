@@ -1,3 +1,7 @@
+
+require('dotenv').config({ path: '../.env' });
+console.log(process.env.DB_HOST, process.env.DB_USER, process.env.DB_PASSWORD, process.env.DB_NAME);
+
 const express = require('express');
 const mysql = require('mysql');
 const cors = require('cors');
@@ -39,6 +43,21 @@ app.get('/api/temas', (req, res) => {
     res.json(results);
   });
 });
+
+// Endpoint para agregar un nuevo tema
+app.post('/api/temas', (req, res) => {
+    const { nombre } = req.body;
+    const query = 'INSERT INTO temas (nombre) VALUES (?)';
+  
+    db.query(query, [nombre], (error, results) => {
+      if (error) {
+        console.error('Error al insertar el tema:', error);
+        res.status(500).json({ message: 'Error al agregar el tema' });
+      } else {
+        res.status(201).json({ id: results.insertId, nombre });
+      }
+    });
+  });
 
 // Iniciar el servidor
 app.listen(5000, () => {
