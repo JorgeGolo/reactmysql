@@ -4,6 +4,7 @@ import './App.css';
 import AddPregunta from './AddPregunta'; // Importa el componente para añadir preguntas
 import AddTema from './AddTema'; // Importa el componente para añadir temas
 import ShowPreguntas from './ShowPreguntas'; // Importa el componente para mostrar preguntas
+import GenerarPregunta from './GenerarPregunta'; // Importa el componente para mostrar preguntas
 
 function App() {
   const [temas, setTemas] = useState([]);
@@ -11,6 +12,7 @@ function App() {
   const [preguntas, setPreguntas] = useState([]); // Nuevo estado para las preguntas
   const [temaNombre, setTemaNombre] = useState(''); // Nuevo estado para el nombre del tema
   const [showAddPregunta, setShowAddPregunta] = useState(false); // Nuevo estado para controlar qué mostrar
+  const [showGenerarPregunta, setShowGenerarPregunta] = useState(false); // Controla mostrar el componente GenerarPregunta
 
   useEffect(() => {
     const fetchTemas = async () => {
@@ -28,6 +30,8 @@ function App() {
   const handleTemaClick = (temaId) => {
     setSelectedTemaId(temaId);
     setShowAddPregunta(true);
+    setShowGenerarPregunta(false); // Oculta GenerarPregunta al agregar una pregunta
+
     const tema = temas.find((tema) => tema.id === temaId);
     if (tema) {
       setTemaNombre(tema.nombre);
@@ -50,9 +54,21 @@ function App() {
     }
   };
 
+  const handleGenerarPregunta = (temaId) => {
+    setSelectedTemaId(temaId);
+    setShowAddPregunta(false);
+    setShowGenerarPregunta(true); // Muestra el componente GenerarPregunta
+    const tema = temas.find((tema) => tema.id === temaId);
+    if (tema) {
+      setTemaNombre(tema.nombre);
+    }
+  };
+
   const handleMostrarPreguntas = async (temaId) => {
     setSelectedTemaId(temaId);
     setShowAddPregunta(false);
+    setShowGenerarPregunta(false); // Oculta GenerarPregunta al agregar una pregunta
+
     await fetchPreguntas(temaId);
   };
 
@@ -79,24 +95,33 @@ function App() {
             <span>{tema.nombre}</span>
             <span onClick={() => handleTemaClick(tema.id)}>Añadir Pregunta</span>
             <span onClick={() => handleMostrarPreguntas(tema.id)}>Mostrar Preguntas</span>
+            <span onClick={() => handleGenerarPregunta(tema.id)}>Generar Pregunta</span>
           </li>
         ))}
         <li><AddTema onAddTema={addTema} /></li>
       </ul>
 
       {/* Mostrar solo un elemento a la vez */}
-      {showAddPregunta ? (
+      {showAddPregunta && (
         <div>
           <h4>Añadir pregunta para el tema: {temaNombre}</h4>
           <AddPregunta temaId={selectedTemaId} onAddPregunta={addPregunta} />
         </div>
-      ) : (
+      )}
+
+      {!showAddPregunta && !showGenerarPregunta && (
         <div>
           {preguntas.length > 0 ? (
             <ShowPreguntas preguntas={preguntas} temaNombre={temaSeleccionado?.nombre} />
           ) : (
-            <p>No hay preguntas para este tema.</p> // Mensaje cuando no hay preguntas
+            <p>No hay preguntas para este tema.</p>
           )}
+        </div>
+      )}
+
+      {showGenerarPregunta && (
+        <div>
+          <GenerarPregunta temaNombre={temaNombre} />
         </div>
       )}
     </div>
