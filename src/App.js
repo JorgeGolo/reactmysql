@@ -66,6 +66,7 @@ function App() {
 
   return (
     <div className="App">
+      <h2>Temas</h2>
       <ul>
         {temas.map((tema) => (
           <li key={tema.id}>
@@ -94,6 +95,7 @@ function App() {
           <GenerarPregunta temaNombre={temaNombre} temaId={selectedTemaId} />
         </div>
       )}
+      <h2>Tests</h2>
     </div>
   );
 }

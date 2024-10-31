@@ -46,64 +46,76 @@ db.connect((err) => {
 });
 
 app.post('/api/generate', async (req, res) => {
-    const { modelo, temaNombre, temaId } = req.body; 
+    const { modelo, temaNombre, temaId } = req.body;
 
     try {
-        // Llamada a la API de OpenAI para generar la pregunta
-        const chatCompletion = await openai.chat.completions.create({
-            model: modelo || "gpt-3.5-turbo",
-            messages: [
-                { role: "system", content: "Eres un asistente útil que genera preguntas de quiz con cuatro opciones de respuesta." },
-                { role: "user", content: `Genera una pregunta sobre ${temaNombre} con cuatro respuestas. Una será la correcta. Siguiendo este formato:
-
-            Pregunta
-            Respuesta 1
-            Respuesta 2
-            Respuesta 3
-            Respuesta 4
-            1
-
-            Es importante que no pongas números, letras, ni símbolos delante de las respuestas.
-            Solo el texto de cada respuesta y, al final, el número de la respuesta correcta en la última línea.
-            La pregunta debe ir en una sola linea, y cada respuesta en una línea para cada una.` }
-            ],
-            max_tokens: 100, 
-            temperature: 0.2
-        });
-
-        const generatedText = chatCompletion.choices[0].message.content;
-        const [question, ...answers] = generatedText.split('\n').filter(line => line.trim());
-
-        const correctAnswer = answers.pop(); // Ultima línea como la respuesta correcta
-
-        // Estructura de la pregunta generada
-        const preguntaGenerada = {
-            pregunta: question,
-            respuesta_1: answers[0] || '',
-            respuesta_2: answers[1] || '',
-            respuesta_3: answers[2] || '',
-            respuesta_4: answers[3] || '',
-            respuesta_correcta: correctAnswer || ''
-        };
-
-        // Verificar si la pregunta ya existe en la base de datos
-        const checkQuery = 'SELECT * FROM preguntas WHERE pregunta = ? AND id_tema = ?';
-        db.query(checkQuery, [question, temaId], (checkError, checkResults) => {
-            if (checkError) {
-                console.error('Error al verificar la pregunta en la base de datos:', checkError);
-                return res.status(500).json({ message: 'Error al verificar la pregunta' });
+        // Extraer todas las preguntas del tema específico desde la base de datos
+        const getAllQuestionsQuery = 'SELECT pregunta FROM preguntas WHERE id_tema = ?';
+        db.query(getAllQuestionsQuery, [temaId], async (error, results) => {
+            if (error) {
+                console.error('Error al obtener las preguntas existentes:', error);
+                return res.status(500).json({ message: 'Error al verificar preguntas existentes' });
             }
 
-            if (checkResults.length > 0) {
-                return res.status(400).json({ message: 'La pregunta ya existe para este tema' });
-            }
+            // Concatenar todas las preguntas existentes en una sola cadena
+            let existingQuestions = results.map(row => row.pregunta).join(' | ');
 
-            // Insertar en la base de datos
-            const query = `
+            // Definir un límite de caracteres (por ejemplo, 500 caracteres)
+            const maxLength = 3000;
+
+            // Truncar existingQuestions al principio si excede el límite
+            if (existingQuestions.length > maxLength) {
+                existingQuestions = existingQuestions.substring(existingQuestions.length - maxLength); // Mantener los últimos maxLength caracteres
+            }
+            // Llamada a la API de OpenAI para generar la pregunta, incluyendo las preguntas existentes en el prompt
+            const chatCompletion = await openai.chat.completions.create({
+                model: modelo || "gpt-3.5-turbo",
+                messages: [
+                    { role: "system", content: "Eres un asistente útil que genera preguntas de quiz con cuatro opciones de respuesta." },
+                    {
+                        role: "user",
+                        content: `Genera una pregunta sobre ${temaNombre} con cuatro respuestas posibles. Una será la correcta.
+                                 No repitas ninguna de las preguntas ya existentes: "${existingQuestions}".
+                                 Sigue este formato:
+                                 
+                                 Pregunta
+                                 Respuesta 1
+                                 Respuesta 2
+                                 Respuesta 3
+                                 Respuesta 4
+                                 1
+
+                                 Es importante que no pongas números, letras, ni símbolos delante de las respuestas.
+                                 Solo el texto de cada respuesta y, al final, el número de la respuesta correcta en la última línea.
+                                 La pregunta debe ir en una sola línea, y cada respuesta en una línea para cada una.`
+                    }
+                ],
+                max_tokens: 100,
+                temperature: 0.2
+            });
+
+            const generatedText = chatCompletion.choices[0].message.content;
+
+            // Procesar el texto generado para separar la pregunta y las respuestas
+            const [question, ...answers] = generatedText.split('\n').filter(line => line.trim());
+            const correctAnswer = answers.pop();
+
+            // Preparar el objeto de pregunta generada
+            const preguntaGenerada = {
+                pregunta: question,
+                respuesta_1: answers[0] || '',
+                respuesta_2: answers[1] || '',
+                respuesta_3: answers[2] || '',
+                respuesta_4: answers[3] || '',
+                respuesta_correcta: correctAnswer || ''
+            };
+
+            // Insertar la pregunta generada en la base de datos
+            const insertQuery = `
                 INSERT INTO preguntas (pregunta, id_tema, respuesta_1, respuesta_2, respuesta_3, respuesta_4, respuesta_correcta)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             `;
-            db.query(query, [question, temaId, answers[0], answers[1], answers[2], answers[3], correctAnswer], (error, results) => {
+            db.query(insertQuery, [question, temaId, answers[0], answers[1], answers[2], answers[3], correctAnswer], (error, results) => {
                 if (error) {
                     console.error('Error al guardar la pregunta en la base de datos:', error);
                     return res.status(500).json({ message: 'Error al guardar la pregunta' });
