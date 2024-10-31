@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import './App.css';
-import AddPregunta from './AddPregunta'; // Importa el componente para añadir preguntas
 import AddTema from './AddTema'; // Importa el componente para añadir temas
 import ShowPreguntas from './ShowPreguntas'; // Importa el componente para mostrar preguntas
 import GenerarPregunta from './GenerarPregunta'; // Importa el componente para mostrar preguntas
@@ -11,7 +10,6 @@ function App() {
   const [selectedTemaId, setSelectedTemaId] = useState(null); // Para manejar el tema seleccionado
   const [preguntas, setPreguntas] = useState([]); // Nuevo estado para las preguntas
   const [temaNombre, setTemaNombre] = useState(''); // Nuevo estado para el nombre del tema
-  const [showAddPregunta, setShowAddPregunta] = useState(false); // Nuevo estado para controlar qué mostrar
   const [showGenerarPregunta, setShowGenerarPregunta] = useState(false); // Controla mostrar el componente GenerarPregunta
 
   useEffect(() => {
@@ -27,16 +25,6 @@ function App() {
     fetchTemas();
   }, []);
 
-  const handleTemaClick = (temaId) => {
-    setSelectedTemaId(temaId);
-    setShowAddPregunta(true);
-    setShowGenerarPregunta(false); // Oculta GenerarPregunta al agregar una pregunta
-
-    const tema = temas.find((tema) => tema.id === temaId);
-    if (tema) {
-      setTemaNombre(tema.nombre);
-    }
-  };
 
   const fetchPreguntas = async (temaId) => {
     try {
@@ -56,7 +44,6 @@ function App() {
 
   const handleGenerarPregunta = (temaId) => {
     setSelectedTemaId(temaId);
-    setShowAddPregunta(false);
     setShowGenerarPregunta(true); // Muestra el componente GenerarPregunta
     const tema = temas.find((tema) => tema.id === temaId);
     if (tema) {
@@ -66,19 +53,10 @@ function App() {
 
   const handleMostrarPreguntas = async (temaId) => {
     setSelectedTemaId(temaId);
-    setShowAddPregunta(false);
     setShowGenerarPregunta(false); // Oculta GenerarPregunta al agregar una pregunta
     await fetchPreguntas(temaId);
   };
 
-  const addPregunta = async (nuevaPregunta) => {
-    try {
-      const response = await axios.post('http://localhost:5000/api/preguntas', nuevaPregunta);
-      setPreguntas((prevPreguntas) => [...prevPreguntas, response.data]);
-    } catch (error) {
-      console.error('Error al añadir pregunta:', error);
-    }
-  };
 
   const addTema = (tema) => {
     setTemas((prevTemas) => [...prevTemas, tema]);
@@ -92,7 +70,6 @@ function App() {
         {temas.map((tema) => (
           <li key={tema.id}>
             <span>{tema.nombre}</span>
-            <span onClick={() => handleTemaClick(tema.id)}>Añadir Pregunta</span>
             <span onClick={() => handleMostrarPreguntas(tema.id)}>Mostrar Preguntas</span>
             <span onClick={() => handleGenerarPregunta(tema.id)}>Generar Pregunta</span>
           </li>
@@ -101,14 +78,8 @@ function App() {
       </ul>
 
       {/* Mostrar solo un elemento a la vez */}
-      {showAddPregunta && (
-        <div>
-          <h4>Añadir pregunta para el tema: {temaNombre}</h4>
-          <AddPregunta temaId={selectedTemaId} onAddPregunta={addPregunta} />
-        </div>
-      )}
 
-      {!showAddPregunta && !showGenerarPregunta && (
+      {!showGenerarPregunta && (
         <div>
           {preguntas.length > 0 ? (
             <ShowPreguntas preguntas={preguntas} temaNombre={temaSeleccionado?.nombre} />
@@ -120,7 +91,7 @@ function App() {
 
       {showGenerarPregunta && (
         <div>
-          <GenerarPregunta temaNombre={temaNombre} />
+          <GenerarPregunta temaNombre={temaNombre} temaId={selectedTemaId} />
         </div>
       )}
     </div>

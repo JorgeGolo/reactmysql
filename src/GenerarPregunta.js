@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const GenerarPregunta = ({ temaNombre }) => {
+const GenerarPregunta = ({ temaNombre, temaId }) => {
     const [pregunta, setPregunta] = useState(null);
     const [modelo, setModelo] = useState("gpt-3.5-turbo"); // Puedes cambiar el modelo a "gpt-4" si prefieres
 
@@ -9,6 +9,7 @@ const GenerarPregunta = ({ temaNombre }) => {
         try {
             const response = await axios.post('http://localhost:5000/api/generate', {
                 temaNombre,
+                temaId, // Envía el temaId al backend
                 modelo,
             });
             setPregunta(response.data);
