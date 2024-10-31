@@ -21,8 +21,8 @@ function AddPregunta({ temaId, onAddPregunta }) {
       respuestaCorrecta,
     };
 
-  // Llama a la función para actualizar el estado en App.js
-  onAddPregunta(nuevaPregunta); 
+    // Llama a la función para actualizar el estado en App.js
+    onAddPregunta(nuevaPregunta); 
   };
 
   return (

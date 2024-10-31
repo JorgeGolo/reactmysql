@@ -153,13 +153,28 @@ app.get('/api/temas', (req, res) => {
   });
 });
 
-/*
-app.post('/api/temas', (req, res) => {
-    const { tema, numero } = req.body
-    const query ='INSERT into test (tema_id, numero_preguintas) VALUES (?,?) ';
+app.post('/api/tests', (req, res) => {
+    const { tema_id, numero_preguntas } = req.body;
 
+    // Establecemos la consulta para insertar la fecha actual junto con tema_id y numero_preguntas
+    const query = 'INSERT INTO test (fecha, tema_id, numero_preguntas) VALUES (NOW(), ?, ?)';
+    
+    db.query(query, [tema_id, numero_preguntas], (error, results) => {
+        if (error) {
+            console.error('Error al insertar en la tabla test:', error);
+            return res.status(500).json({ error: 'Error al crear el test.' });
+        }
+        
+        // Respuesta exitosa con los datos insertados
+        res.status(201).json({
+            message: 'Test creado exitosamente',
+            testId: results.insertId,
+            fecha: new Date(), // Fecha actual
+            tema_id,
+            numero_preguntas
+        });
+    });
 });
-*/
 
 app.post('/api/preguntas', (req, res) => {
     const { pregunta, temaId, respuestas, respuestaCorrecta } = req.body;
