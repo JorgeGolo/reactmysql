@@ -46,36 +46,46 @@ db.connect((err) => {
 });
 
 app.post('/api/generate', async (req, res) => {
-    const { modelo, temaNombre, temaId } = req.body; // Recibir el modelo, tema y temaId desde el frontend
+    const { modelo, temaNombre, temaId } = req.body; 
 
     try {
         // Llamada a la API de OpenAI para generar la pregunta
         const chatCompletion = await openai.chat.completions.create({
-            model: modelo || "gpt-4",
+            model: modelo || "gpt-3.5-turbo",
             messages: [
                 { role: "system", content: "Eres un asistente útil que genera preguntas de quiz con cuatro opciones de respuesta." },
-                { role: "user", content: `Genera una pregunta sobre ${temaNombre} con cuatro posibles respuestas. Agrega la respuesta correcta en otra línea.` }
+                { role: "user", content: `Genera una pregunta sobre ${temaNombre} con cuatro respuestas. Una será la correcta. Siguiendo este formato:
+
+            Pregunta
+            Respuesta 1
+            Respuesta 2
+            Respuesta 3
+            Respuesta 4
+            1
+
+            Es importante que no pongas números, letras, ni símbolos delante de las respuestas.
+            Solo el texto de cada respuesta y, al final, el número de la respuesta correcta en la última línea.
+            La pregunta debe ir en una sola linea, y cada respuesta en una línea para cada una.` }
             ],
+            max_tokens: 100, 
+            temperature: 0.2
         });
 
         const generatedText = chatCompletion.choices[0].message.content;
-
-        // Procesar el texto generado para separar la pregunta y las respuestas
         const [question, ...answers] = generatedText.split('\n').filter(line => line.trim());
 
-        // Eliminar letras y paréntesis al inicio de cada respuesta y limpiar la respuesta correcta
-        const cleanAnswers = answers.map(answer => answer.replace(/^[A-D]\)\s*/, '').trim());
-        const correctAnswer = cleanAnswers.pop().replace(/^Respuesta correcta:\s*/, '');
+        const correctAnswer = answers.pop(); // Ultima línea como la respuesta correcta
 
-        // Enviar la pregunta generada al frontend
+        // Estructura de la pregunta generada
         const preguntaGenerada = {
             pregunta: question,
-            respuesta_1: cleanAnswers[0] || '',
-            respuesta_2: cleanAnswers[1] || '',
-            respuesta_3: cleanAnswers[2] || '',
-            respuesta_4: cleanAnswers[3] || '',
+            respuesta_1: answers[0] || '',
+            respuesta_2: answers[1] || '',
+            respuesta_3: answers[2] || '',
+            respuesta_4: answers[3] || '',
             respuesta_correcta: correctAnswer || ''
         };
+
         // Verificar si la pregunta ya existe en la base de datos
         const checkQuery = 'SELECT * FROM preguntas WHERE pregunta = ? AND id_tema = ?';
         db.query(checkQuery, [question, temaId], (checkError, checkResults) => {
@@ -88,7 +98,7 @@ app.post('/api/generate', async (req, res) => {
                 return res.status(400).json({ message: 'La pregunta ya existe para este tema' });
             }
 
-            // Si la pregunta no existe, insertarla en la base de datos
+            // Insertar en la base de datos
             const query = `
                 INSERT INTO preguntas (pregunta, id_tema, respuesta_1, respuesta_2, respuesta_3, respuesta_4, respuesta_correcta)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
