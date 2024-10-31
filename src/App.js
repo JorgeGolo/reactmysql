@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import './App.css';
-import AddTema from './AddTema'; // Importa el componente para añadir temas
-import ShowPreguntas from './ShowPreguntas'; // Importa el componente para mostrar preguntas
-import GenerarPregunta from './GenerarPregunta'; // Importa el componente para mostrar preguntas
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import AddTema from './AddTema'; 
+import ShowPreguntas from './ShowPreguntas'; 
+import GenerarPregunta from './GenerarPregunta';
+import Tests from './Tests'; // Importa el nuevo componente Tests
 
 function App() {
   const [temas, setTemas] = useState([]);
-  const [selectedTemaId, setSelectedTemaId] = useState(null); // Para manejar el tema seleccionado
-  const [preguntas, setPreguntas] = useState([]); // Nuevo estado para las preguntas
-  const [temaNombre, setTemaNombre] = useState(''); // Nuevo estado para el nombre del tema
-  const [showGenerarPregunta, setShowGenerarPregunta] = useState(false); // Controla mostrar el componente GenerarPregunta
+  const [selectedTemaId, setSelectedTemaId] = useState(null);
+  const [preguntas, setPreguntas] = useState([]);
+  const [temaNombre, setTemaNombre] = useState('');
+  const [showGenerarPregunta, setShowGenerarPregunta] = useState(false);
 
   useEffect(() => {
     const fetchTemas = async () => {
@@ -25,26 +27,23 @@ function App() {
     fetchTemas();
   }, []);
 
-
   const fetchPreguntas = async (temaId) => {
     try {
       const response = await axios.get(`http://localhost:5000/api/preguntas/${temaId}`);
-      
-      // Verificar si hay preguntas en la respuesta
       if (response.data && Array.isArray(response.data)) {
-        setPreguntas(response.data); // Si hay preguntas, las establece
+        setPreguntas(response.data);
       } else {
-        setPreguntas([]); // Si no hay preguntas, establece un arreglo vacío
+        setPreguntas([]);
       }
     } catch (error) {
       console.warn('Error al cargar preguntas:', error);
-      setPreguntas([]); // También puedes limpiar las preguntas en caso de error
+      setPreguntas([]);
     }
   };
 
   const handleGenerarPregunta = (temaId) => {
     setSelectedTemaId(temaId);
-    setShowGenerarPregunta(true); // Muestra el componente GenerarPregunta
+    setShowGenerarPregunta(true);
     const tema = temas.find((tema) => tema.id === temaId);
     if (tema) {
       setTemaNombre(tema.nombre);
@@ -53,10 +52,9 @@ function App() {
 
   const handleMostrarPreguntas = async (temaId) => {
     setSelectedTemaId(temaId);
-    setShowGenerarPregunta(false); // Oculta GenerarPregunta al agregar una pregunta
+    setShowGenerarPregunta(false);
     await fetchPreguntas(temaId);
   };
-
 
   const addTema = (tema) => {
     setTemas((prevTemas) => [...prevTemas, tema]);
@@ -65,38 +63,50 @@ function App() {
   const temaSeleccionado = temas.find((tema) => tema.id === selectedTemaId);
 
   return (
-    <div className="App">
-      <h2>Temas</h2>
-      <ul>
-        {temas.map((tema) => (
-          <li key={tema.id}>
-            <span>{tema.nombre}</span>
-            <span onClick={() => handleMostrarPreguntas(tema.id)}>Mostrar Preguntas</span>
-            <span onClick={() => handleGenerarPregunta(tema.id)}>Generar Pregunta</span>
-          </li>
-        ))}
-        <li><AddTema onAddTema={addTema} /></li>
-      </ul>
+    <Router>
+      <div className="App">
+        <nav>
+          <Link to="/">Temas y preguntas</Link> | <Link to="/tests">Tests</Link>
+        </nav>
 
-      {/* Mostrar solo un elemento a la vez */}
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              <div>
+                <h2>Temas y preguntas</h2>
+                <ul>
+                  {temas.map((tema) => (
+                    <li key={tema.id}>
+                      <span>{tema.nombre}</span>
+                      <button onClick={() => handleMostrarPreguntas(tema.id)}>Mostrar Preguntas</button>
+                      <button onClick={() => handleGenerarPregunta(tema.id)}>Generar Pregunta</button>
+                    </li>
+                  ))}
+                  <li><AddTema onAddTema={addTema} /></li>
+                </ul>
 
-      {!showGenerarPregunta && (
-        <div>
-          {preguntas.length > 0 ? (
-            <ShowPreguntas preguntas={preguntas} temaNombre={temaSeleccionado?.nombre} />
-          ) : (
-            <p>No hay preguntas para este tema.</p>
-          )}
-        </div>
-      )}
+                {!showGenerarPregunta && (
+                  <div>
+                    {preguntas.length > 0 ? (
+                      <ShowPreguntas preguntas={preguntas} temaNombre={temaSeleccionado?.nombre} />
+                    ) : (
+                      <p>No hay preguntas para este tema.</p>
+                    )}
+                  </div>
+                )}
 
-      {showGenerarPregunta && (
-        <div>
-          <GenerarPregunta temaNombre={temaNombre} temaId={selectedTemaId} />
-        </div>
-      )}
-      <h2>Tests</h2>
-    </div>
+                {showGenerarPregunta && (
+                  <GenerarPregunta temaNombre={temaNombre} temaId={selectedTemaId} />
+                )}
+              </div>
+            }
+          />
+
+          <Route path="/tests" element={<Tests />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

@@ -153,6 +153,14 @@ app.get('/api/temas', (req, res) => {
   });
 });
 
+/*
+app.post('/api/temas', (req, res) => {
+    const { tema, numero } = req.body
+    const query ='INSERT into test (tema_id, numero_preguintas) VALUES (?,?) ';
+
+});
+*/
+
 app.post('/api/preguntas', (req, res) => {
     const { pregunta, temaId, respuestas, respuestaCorrecta } = req.body;
 
