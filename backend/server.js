@@ -140,6 +140,18 @@ app.post('/api/generate', async (req, res) => {
 app.get('/api/test', (req, res) => {
     res.send('¡Servidor funcionando!');
 });
+// Ruta para obtener datos de la tabla test
+app.get('/api/tests', (req, res) => {
+    const sql = 'SELECT * FROM test'; // Consulta para obtener todos los tests
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error('Error al obtener los tests:', err);
+            res.status(500).json({ error: 'Error al obtener los tests' });
+        } else {
+            res.json(results); // Enviar los resultados como respuesta JSON
+        }
+    });
+});
 
 // Ruta para obtener datos de la tabla temas
 app.get('/api/temas', (req, res) => {
