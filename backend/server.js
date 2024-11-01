@@ -255,3 +255,43 @@ app.get('/api/preguntas/:temaId', (req, res) => {
         res.json(results); // Devuelve las preguntas encontradas
     });
 });
+
+
+
+// Ruta para obtener un número específico de preguntas de un tema basado en el test
+app.get('/api/tests/:testId/preguntas', (req, res) => {
+    const testId = req.params.testId; // Obtén el ID del test de los parámetros de la ruta
+
+    // Consulta para obtener el tema y el número de preguntas del test
+    const testQuery = 'SELECT tema_id, numero_preguntas FROM test WHERE id = ?';
+
+    db.query(testQuery, [testId], (err, testResults) => {
+        if (err) {
+            console.error('Error al obtener datos del test:', err);
+            return res.status(500).json({ message: 'Error al obtener datos del test' });
+        }
+
+        if (testResults.length === 0) {
+            return res.status(404).json({ message: 'No se encontró el test' });
+        }
+
+        const temaId = testResults[0].tema_id;
+        const numeroPreguntas = testResults[0].numero_preguntas;
+
+        // Consulta para obtener un número específico de preguntas del tema
+        const preguntasQuery = 'SELECT * FROM preguntas WHERE id_tema = ? LIMIT ?';
+
+        db.query(preguntasQuery, [temaId, numeroPreguntas], (err, preguntasResults) => {
+            if (err) {
+                console.error('Error al obtener preguntas:', err);
+                return res.status(500).json({ message: 'Error al obtener preguntas' });
+            }
+
+            if (preguntasResults.length === 0) {
+                return res.status(404).json({ message: 'No se encontraron preguntas para este tema' });
+            }
+
+            res.json(preguntasResults); // Devuelve las preguntas encontradas
+        });
+    });
+});
