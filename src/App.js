@@ -5,6 +5,8 @@ import AddTema from './AddTema';
 import ShowPreguntas from './ShowPreguntas'; 
 import GenerarPregunta from './GenerarPregunta';
 import Cuestionario from './Cuestionario';
+import Nav from './Nav';
+
 
 function App() {
   const [temas, setTemas] = useState([]);
@@ -17,6 +19,8 @@ function App() {
   const [numeroPreguntas, setNumeroPreguntas] = useState(10); // Estado para número de preguntas
   const [temaidSeleccionado, setTemaidSeleccionado] = useState(null); // Estado para almacenar el temaId seleccionado
 
+
+  
   useEffect(() => {
     const fetchTemas = async () => {
       try {
@@ -106,6 +110,7 @@ function App() {
 
   return (
     <div className="App">
+      <Nav/>
       <h2>Temas y preguntas</h2>
       <ul>
         {temas.map((tema) => (
