@@ -165,6 +165,23 @@ app.get('/api/temas', (req, res) => {
   });
 });
 
+
+// Endpoint para eliminar un tema, incluyendo dependencias en las tablas relacionadas
+// poruqe hemos añadido on delete cascade a las tablas correspondientes
+app.delete('/api/temas/:id', (req, res) => {
+    const temaId = req.params.id;
+
+    // Elimina el tema, y debido a ON DELETE CASCADE, se eliminarán automáticamente las preguntas y tests relacionados
+    db.query('DELETE FROM temas WHERE id = ?', [temaId], (err, result) => {
+        if (err) {
+            console.error('Error al eliminar el tema:', err);
+            return res.status(500).json({ error: 'Error al eliminar el tema' });
+        }
+
+        res.status(200).json({ message: 'Tema y registros relacionados eliminados correctamente' });
+    });
+});
+
 app.post('/api/tests', (req, res) => {
     const { tema_id, numero_preguntas } = req.body;
 
