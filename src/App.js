@@ -5,6 +5,10 @@ import AddTema from './AddTema';
 import ShowPreguntas from './ShowPreguntas'; 
 import GenerarPregunta from './GenerarPregunta';
 import Cuestionario from './Cuestionario';
+
+import Constitucion from './Constitucion';
+
+
 import Nav from './Nav';
 
 

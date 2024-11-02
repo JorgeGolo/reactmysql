@@ -18,7 +18,6 @@ const openai = new OpenAI({
 
 
 
-
 // Configura la conexión con MySQL
 const db = mysql.createConnection({
     host: process.env.DB_HOST,
@@ -26,6 +25,18 @@ const db = mysql.createConnection({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
 });
+
+// Endpoint para obtener los datos
+app.get('/api/constitucion', (req, res) => {
+    const sql = 'SELECT * FROM constitucion1';
+    db.query(sql, (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(results);
+    });
+});
+
 
 app.post('/api/test-openai', async (req, res) => {
     try {

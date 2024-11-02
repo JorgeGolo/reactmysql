@@ -7,6 +7,7 @@ const Nav = () => {
     <nav>
     <Link to="/">Inicio</Link>
     <Link to="/examenes">Exámenes</Link>
+    <Link to="/constitucion">Constitución</Link>
   </nav>
   );
 };
