@@ -108,29 +108,64 @@ function App() {
 
   const temaSeleccionado = temas.find((tema) => tema.id === selectedTemaId);
 
+  const handleBorrarTema = async (temaid) => {
+    const confirmacion = window.confirm(
+        "¿Estás seguro de que deseas borrar este tema? Esto también eliminará todas las preguntas y tests relacionados."
+    );
+
+    if (!confirmacion) {
+        return; // Si el usuario cancela, no hacer nada
+    }
+
+    try {
+        await axios.delete(`http://localhost:5000/api/temas/${temaid}`);
+
+        // Actualiza el estado para eliminar el tema de la lista
+        setTemas((prevTemas) => prevTemas.filter((tema) => tema.id !== temaid));
+
+        // Actualiza el estado de tests para eliminar aquellos que están relacionados con el tema borrado
+        setTests((prevTests) => prevTests.filter((test) => test.tema_id !== temaid));
+
+        // Limpia las preguntas si el tema borrado es el actualmente seleccionado
+        if (selectedTemaId === temaid) {
+            setPreguntas([]); // Limpia las preguntas
+            setSelectedTemaId(null); // Opcional: Resetea el tema seleccionado
+        }
+
+        console.log('Tema borrado y tests actualizados correctamente');
+    } catch (error) {
+        console.error('Error al borrar el tema:', error);
+        alert('Error al borrar el tema.');
+    }
+};
+
   return (
     <div className="App">
       <Nav/>
       <h2>Temas y preguntas</h2>
+      <h3>Temas generales</h3>
       <ul>
         {temas.map((tema) => (
           <li key={tema.id}>
             <span>{tema.nombre}</span>
             <button onClick={() => handleMostrarPreguntas(tema.id)}>Mostrar Preguntas</button>
             <button onClick={() => handleGenerarPregunta(tema.id)}>Generar Pregunta</button>
+            <button onClick={() => handleBorrarTema(tema.id)}>Borrar Tema</button>
           </li>
         ))}
         <li><AddTema onAddTema={addTema} /></li>
       </ul>
+      <h3>Constitución Española</h3>
+
 
       {!showGenerarPregunta && (
-        <div>
+      <div>
           {preguntas.length > 0 ? (
-            <ShowPreguntas preguntas={preguntas} temaNombre={temaSeleccionado?.nombre} />
+              <ShowPreguntas preguntas={preguntas} temaNombre={temaSeleccionado?.nombre} />
           ) : (
-            <p>No hay preguntas para este tema.</p>
+              <p>No hay preguntas para este tema.</p>
           )}
-        </div>
+      </div>
       )}
 
       {showGenerarPregunta && (
@@ -138,9 +173,7 @@ function App() {
       )}
 
       {/* Sección de Tests */}
-      <h2>Crear Tests</h2>
-      <p>Esta es la pantalla de tests, donde se mostrarán las pruebas disponibles.</p>
-
+      <h2>Crear Examen</h2>
       <form onSubmit={(e) => e.preventDefault()}>
         <label>Tema:</label>
         <select value={selectedTema} onChange={handleSelectChange}>
@@ -159,10 +192,10 @@ function App() {
           onChange={(e) => setNumeroPreguntas(e.target.value)}
           min="1"
         />
-        <button onClick={handleCreateTest}>Crear test</button>
+        <button onClick={handleCreateTest}>Crear examen</button>
       </form>
 
-      <h3>Lista de Tests</h3>
+      <h3>Lista de Exámenes Creados</h3>
       <ul>
                 {tests.map((test) => {
                     // Encuentra el tema correspondiente al tema_id del test

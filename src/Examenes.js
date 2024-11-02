@@ -10,6 +10,7 @@ const Examenes = () => {
     const [tests, setTests] = useState([]); // Estado para almacenar la lista de tests
     const [temas, setTemas] = useState([]);
     const [temaidSeleccionado, setTemaidSeleccionado] = useState(null); // Estado para almacenar el temaId seleccionado
+    const [temaNombre, setTemaNombre] = useState('');
 
     const handleGenerarTest = (temaid) => {
         setTemaidSeleccionado(temaid); // Almacena el temaId para mostrar en Cuestionario
@@ -17,7 +18,15 @@ const Examenes = () => {
     
 
     useEffect(() => {
-   
+        const fetchTemas = async () => {
+          try {
+            const response = await axios.get('http://localhost:5000/api/temas');
+            setTemas(response.data);
+          } catch (error) {
+            console.error('Error al obtener temas con axios:', error);
+          }
+        };
+    
         const fetchTests = async () => {
           try {
             const response = await axios.get('http://localhost:5000/api/tests');
@@ -27,9 +36,9 @@ const Examenes = () => {
           }
         };
     
+        fetchTemas();
         fetchTests();
-     },
-    []);
+    }, []);
     
 
     return (
@@ -48,8 +57,8 @@ const Examenes = () => {
 
                     return (
                         <li key={test.id}>
-                            ID: {test.id} | Tema: {temaNombre} (ID: {test.tema_id}) | Número de Preguntas: {test.numero_preguntas} | Fecha: {test.fecha}
-                            <button onClick={() => handleGenerarTest(test.id)}>Hacer test</button>
+                            {test.id} | Tema: {temaNombre} ({test.tema_id}) | {test.numero_preguntas} preguntas
+                            <button onClick={() => handleGenerarTest(test.id)}>Hacer examen</button>
                         </li>
                     );
                 })}
