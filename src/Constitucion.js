@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import Nav from './Nav'; // Asegúrate de que este componente existe y está bien importado
+import Nav from './Nav';
 
 const App = () => {
     const [data, setData] = useState([]);
@@ -26,7 +26,7 @@ const App = () => {
     const structureData = (data) => {
         const map = {};
         data.forEach(item => {
-            map[item.id] = { ...item, children: [] }; // Inicializa la estructura
+            map[item.id] = { ...item, children: [] };
         });
 
         const tree = [];
@@ -34,7 +34,7 @@ const App = () => {
             if (item.id_padre) {
                 map[item.id_padre].children.push(map[item.id]);
             } else {
-                tree.push(map[item.id]); // Es un elemento raíz
+                tree.push(map[item.id]);
             }
         });
 
@@ -44,8 +44,40 @@ const App = () => {
     const toggleExpand = (id) => {
         setExpandedItems((prev) => ({
             ...prev,
-            [id]: !prev[id], // Alterna entre expandido y contraído
+            [id]: !prev[id],
         }));
+    };
+    const renderContent = (content) => {
+        if (!content) return null;
+    
+        // Verifica si el contenido contiene una lista numerada (1. 2. 3...) o alfabética (a) b) c)...)
+        const hasNumberedList = content.match(/\b\d\.\s/);
+        const hasAlphaList = content.match(/\b[a-i]\)\s/);
+    
+        // Si el contenido tiene una lista, dividimos en partes
+        if (hasNumberedList || hasAlphaList) {
+            // Usamos la expresión regular adecuada para capturar los elementos de lista
+            const listItems = content.match(hasNumberedList
+                ? /(?:\b\d\.\s)([^\d].*?)(?=\b\d\.\s|$)/gs
+                : /(?:\b[a-i]\)\s)([^\d].*?)(?=\b[a-i]\)\s|$)/gs);
+    
+            // Extraemos el texto antes de la lista, si existe
+            const [initialText] = content.split(listItems[0]);
+    
+            return (
+                <div>
+                    {initialText && <p>{initialText.trim()}</p>}
+                    <ul>
+                        {listItems.map((item, index) => (
+                            <li key={index}>{item.trim()}</li>
+                        ))}
+                    </ul>
+                </div>
+            );
+        }
+    
+        // Si no se detecta una lista, renderiza el contenido como un párrafo
+        return <p>{content}</p>;
     };
 
     const renderTree = (items) => {
@@ -58,7 +90,7 @@ const App = () => {
                         </h2>
                         {expandedItems[item.id] && (
                             <>
-                                <p>{item.contenido}</p>
+                                {renderContent(item.contenido)}
                                 {item.children && item.children.length > 0 && renderTree(item.children)}
                             </>
                         )}
