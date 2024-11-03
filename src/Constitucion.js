@@ -6,6 +6,7 @@ const App = () => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [expandedItems, setExpandedItems] = useState({});
 
     useEffect(() => {
         const fetchData = async () => {
@@ -40,14 +41,27 @@ const App = () => {
         return tree;
     };
 
+    const toggleExpand = (id) => {
+        setExpandedItems((prev) => ({
+            ...prev,
+            [id]: !prev[id], // Alterna entre expandido y contraído
+        }));
+    };
+
     const renderTree = (items) => {
         return (
             <ul>
                 {items.map(item => (
                     <li key={item.id}>
-                        <h2>{item.titulo}</h2>
-                        <p>{item.contenido}</p>
-                        {item.children && item.children.length > 0 && renderTree(item.children)} {/* Llama a la función recursivamente */}
+                        <h2 onClick={() => toggleExpand(item.id)} style={{ cursor: 'pointer' }}>
+                            {item.titulo}
+                        </h2>
+                        {expandedItems[item.id] && (
+                            <>
+                                <p>{item.contenido}</p>
+                                {item.children && item.children.length > 0 && renderTree(item.children)}
+                            </>
+                        )}
                     </li>
                 ))}
             </ul>
@@ -60,7 +74,7 @@ const App = () => {
     return (
         <div>
             <Nav />
-            {renderTree(data)} {/* Renderiza la estructura de datos */}
+            {renderTree(data)}
         </div>
     );
 };
