@@ -1,6 +1,5 @@
 
 require('dotenv').config({ path: '../.env' });
-console.log(process.env.DB_HOST, process.env.DB_USER, process.env.DB_PASSWORD, process.env.DB_NAME);
 
 const express = require('express');
 const mysql = require('mysql');
@@ -320,6 +319,113 @@ app.get('/api/tests/:testId/preguntas', (req, res) => {
             }
 
             res.json(preguntasResults); // Devuelve las preguntas encontradas
+        });
+    });
+});
+app.get('/api/preguntaconsta', async (req, res) => {
+    // Obtener el modelo desde los parámetros de consulta
+    const modelo = req.query.modelo; // Esto recibe el modelo que enviaste desde el frontend
+    //console.log('Modelo recibido:', modelo);
+
+    // Primero, obtener un ID aleatorio
+    const selectIdAleatorioQuery = `
+        SELECT id
+        FROM constitucion1
+        WHERE id NOT IN (SELECT id_padre FROM constitucion1 WHERE id_padre IS NOT NULL)
+        ORDER BY RAND()
+        LIMIT 1
+    `;
+
+    db.query(selectIdAleatorioQuery, async (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+
+        if (results.length === 0) {
+            return res.json({ mensaje: 'No se encontraron preguntas.' });
+        }
+
+        const idAleatorio = results[0].id;
+
+        // Realizar la consulta recursiva usando el ID aleatorio
+        const recursiveQuery = `
+            WITH RECURSIVE ArticuloJerarquia AS (
+                SELECT id, nivel, titulo, contenido, id_padre
+                FROM constitucion1
+                WHERE id = ?
+                UNION ALL
+                SELECT tc.id, tc.nivel, tc.titulo, tc.contenido, tc.id_padre
+                FROM constitucion1 tc
+                INNER JOIN ArticuloJerarquia aj ON tc.id = aj.id_padre
+            )
+            SELECT GROUP_CONCAT(
+                CONCAT(
+                    "el contenido '", contenido, "' con nombre '", titulo, "'"
+                ) ORDER BY nivel DESC SEPARATOR " que pertenece a "
+            ) AS descripcion
+            FROM ArticuloJerarquia;
+        `;
+
+        // Ejecutar la consulta recursiva
+        db.query(recursiveQuery, [idAleatorio], async (err, results) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+
+            if (results.length === 0 || !results[0].descripcion) {
+                return res.json({ mensaje: 'No se encontraron preguntas.' });
+            }
+
+            const descripcion = results[0].descripcion;
+
+            // Aquí llamamos a la API de OpenAI
+            try {
+                const chatCompletion = await openai.chat.completions.create({
+                    model: modelo || "gpt-3.5-turbo", // Usa el modelo recibido o uno por defecto
+                    messages: [
+                        { role: "system", content: "Eres un asistente útil que genera preguntas de quiz con cuatro opciones de respuesta." },
+                        {
+                            role: "user",
+                            content: `Genera una pregunta sobre ${descripcion} con cuatro respuestas posibles. Una será la correcta.
+                                 Sigue este formato:
+                                 
+                                 Pregunta
+                                 Respuesta 1
+                                 Respuesta 2
+                                 Respuesta 3
+                                 Respuesta 4
+                                 1
+
+                                 Es importante que no pongas números, letras, ni símbolos delante de las respuestas.
+                                 Solo el texto de cada respuesta y, al final, el número de la respuesta correcta en la última línea.
+                                 La pregunta debe ir en una sola línea, y cada respuesta en una línea para cada una.`
+                    
+                        }
+                    ]
+                });
+
+                // Aquí puedes procesar la respuesta de OpenAI y enviarla al cliente
+                const generatedText = chatCompletion.choices[0].message.content;
+
+                // Procesar el texto generado para separar la pregunta y las respuestas
+                const [question, ...answers] = generatedText.split('\n').filter(line => line.trim());
+                const correctAnswer = answers.pop();
+    
+                // Preparar el objeto de pregunta generada
+                const preguntaGenerada = {
+                    pregunta: question,
+                    respuesta_1: answers[0] || '',
+                    respuesta_2: answers[1] || '',
+                    respuesta_3: answers[2] || '',
+                    respuesta_4: answers[3] || '',
+                    respuesta_correcta: correctAnswer || ''
+                };                
+                res.json({ descripcion, pregunta: preguntaGenerada });
+                //console.log(preguntaGenerada)
+            } catch (openaiError) {
+                console.error('Error al comunicarse con OpenAI:', openaiError);
+                res.status(500).json({ error: 'Error al generar la pregunta con OpenAI.' });
+            }
         });
     });
 });

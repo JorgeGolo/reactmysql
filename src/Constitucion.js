@@ -79,22 +79,38 @@ const App = () => {
         // Si no se detecta una lista, renderiza el contenido como un párrafo
         return <p>{content}</p>;
     };
+    const excludedIds = [11, 66, 77, 112, 124, 146, 156, 182, 190, 134, 165, 161 , 157, 13, 18, 46, 61, 64, 78, 94, 107, 157, 36, 20];
 
     const renderTree = (items) => {
         return (
             <ul>
                 {items.map(item => (
-                    <li key={item.id}>
-                        <h2 onClick={() => toggleExpand(item.id)} style={{ cursor: 'pointer' }}>
-                            {item.titulo}
-                        </h2>
+
+                    !excludedIds.includes(item.id) ? ( // Filtrar usando el array
+
+                        <li key={item.id}>
+                            <h3 onClick={() => toggleExpand(item.id)} style={{ cursor: 'pointer' }}>
+                                {item.titulo}
+                            </h3>
+                            {expandedItems[item.id] && (
+                                <>
+                                    {renderContent(item.contenido)}
+                                    {item.children && item.children.length > 0 && renderTree(item.children)}
+                                </>
+                            )}
+                        </li>
+                    ) : (
+                        <li key={item.id}>
+                        <h3 onClick={() => toggleExpand(item.id)} style={{ cursor: 'pointer' }}>
+                            {item.titulo} - {item.contenido}
+                        </h3>
                         {expandedItems[item.id] && (
                             <>
-                                {renderContent(item.contenido)}
                                 {item.children && item.children.length > 0 && renderTree(item.children)}
                             </>
                         )}
                     </li>
+                    )
                 ))}
             </ul>
         );

@@ -6,6 +6,7 @@ import reportWebVitals from './reportWebVitals';
 import Examenes from './Examenes'; // el nuevo componente que vamos a crear
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Constitucion from './Constitucion';
+import Testconstitucion from './Testconstitucion';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -15,6 +16,7 @@ root.render(
       <Route path="/" element={<App />} />
       <Route path="/examenes" element={<Examenes />} />
       <Route path="/constitucion" element={<Constitucion />} />
+      <Route path="/testconstitucion" element={<Testconstitucion />} />
 
     </Routes>
   </Router>

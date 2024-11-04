@@ -8,6 +8,7 @@ const Nav = () => {
     <Link to="/">Inicio</Link>
     <Link to="/examenes">Exámenes</Link>
     <Link to="/constitucion">Constitución</Link>
+    <Link to="/testconstitucion">Test Constitución</Link>
   </nav>
   );
 };
