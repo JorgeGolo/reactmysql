@@ -325,7 +325,6 @@ app.get('/api/tests/:testId/preguntas', (req, res) => {
 app.get('/api/preguntaconsta', async (req, res) => {
     // Obtener el modelo desde los parámetros de consulta
     const modelo = req.query.modelo; // Esto recibe el modelo que enviaste desde el frontend
-    //console.log('Modelo recibido:', modelo);
 
     // Primero, obtener un ID aleatorio
     const selectIdAleatorioQuery = `
@@ -356,7 +355,7 @@ app.get('/api/preguntaconsta', async (req, res) => {
                 UNION ALL
                 SELECT tc.id, tc.nivel, tc.titulo, tc.contenido, tc.id_padre
                 FROM constitucion1 tc
-                INNER JOIN ArticuloJerarquia aj ON tc.id = aj.id_padre
+                INNER JOIN ArticuloJerarquia aj ON tc.id_padre = aj.id
             )
             SELECT GROUP_CONCAT(
                 CONCAT(
@@ -378,54 +377,92 @@ app.get('/api/preguntaconsta', async (req, res) => {
 
             const descripcion = results[0].descripcion;
 
-            // Aquí llamamos a la API de OpenAI
-            try {
-                const chatCompletion = await openai.chat.completions.create({
-                    model: modelo || "gpt-3.5-turbo", // Usa el modelo recibido o uno por defecto
-                    messages: [
-                        { role: "system", content: "Eres un asistente útil que genera preguntas de quiz con cuatro opciones de respuesta." },
-                        {
-                            role: "user",
-                            content: `Genera una pregunta sobre ${descripcion} con cuatro respuestas posibles. Una será la correcta.
-                                 Sigue este formato:
-                                 
-                                 Pregunta
-                                 Respuesta 1
-                                 Respuesta 2
-                                 Respuesta 3
-                                 Respuesta 4
-                                 1
+            // Consulta para obtener la jerarquía completa del artículo
+            const recursiveQuery2 = `
+                WITH RECURSIVE ArticuloJerarquia AS (
+            SELECT id, nivel, titulo, contenido, id_padre
+            FROM constitucion1
+            WHERE id = ?
+            UNION ALL
+            SELECT tc.id, tc.nivel, tc.titulo, tc.contenido, tc.id_padre
+            FROM constitucion1 tc
+            INNER JOIN ArticuloJerarquia aj ON tc.id_padre = aj.id
+        )
+        SELECT aj.id, aj.nivel, aj.titulo, aj.contenido, aj.id_padre,
+            (SELECT titulo FROM constitucion1 WHERE id = aj.id_padre) AS titulo_padre
+        FROM ArticuloJerarquia aj
+        ORDER BY aj.nivel DESC;
+            `;
 
-                                 Es importante que no pongas números, letras, ni símbolos delante de las respuestas.
-                                 Solo el texto de cada respuesta y, al final, el número de la respuesta correcta en la última línea.
-                                 La pregunta debe ir en una sola línea, y cada respuesta en una línea para cada una.`
-                    
-                        }
-                    ]
-                });
+            // Ejecutar la consulta recursiva para obtener la jerarquía
+            db.query(recursiveQuery2, [idAleatorio], async (err, results) => {
+                if (err) {
+                    return res.status(500).json({ error: err.message });
+                }
 
-                // Aquí puedes procesar la respuesta de OpenAI y enviarla al cliente
-                const generatedText = chatCompletion.choices[0].message.content;
+                if (results.length === 0) {
+                    return res.json({ mensaje: 'No se encontraron artículos.' });
+                }
 
-                // Procesar el texto generado para separar la pregunta y las respuestas
-                const [question, ...answers] = generatedText.split('\n').filter(line => line.trim());
-                const correctAnswer = answers.pop();
-    
-                // Preparar el objeto de pregunta generada
-                const preguntaGenerada = {
-                    pregunta: question,
-                    respuesta_1: answers[0] || '',
-                    respuesta_2: answers[1] || '',
-                    respuesta_3: answers[2] || '',
-                    respuesta_4: answers[3] || '',
-                    respuesta_correcta: correctAnswer || ''
-                };                
-                res.json({ descripcion, pregunta: preguntaGenerada });
-                //console.log(preguntaGenerada)
-            } catch (openaiError) {
-                console.error('Error al comunicarse con OpenAI:', openaiError);
-                res.status(500).json({ error: 'Error al generar la pregunta con OpenAI.' });
-            }
+                // Construir un objeto para la jerarquía
+                const jerarquia = results.map(item => ({
+                    id: item.id,
+                    nivel: item.nivel,
+                    titulo: item.titulo,
+                    contenido: item.contenido,
+                    id_padre: item.id_padre
+                }));
+
+                // Aquí llamamos a la API de OpenAI
+                try {
+                    const chatCompletion = await openai.chat.completions.create({
+                        model: modelo || "gpt-3.5-turbo", // Usa el modelo recibido o uno por defecto
+                        messages: [
+                            { role: "system", content: "Eres un asistente útil que genera preguntas de quiz con cuatro opciones de respuesta." },
+                            {
+                                role: "user",
+                                content: `Genera una pregunta sobre ${descripcion} con cuatro respuestas posibles. Sólo una debe ser correcta.
+                                            Sigue este formato:
+                                            
+                                            Pregunta
+                                            Respuesta 1
+                                            Respuesta 2
+                                            Respuesta 3
+                                            Respuesta 4
+                                            1
+
+                                            Es importante que no pongas números, letras, ni símbolos delante de las respuestas.
+                                            Solo el texto de cada respuesta y, al final, el número de la respuesta correcta en la última línea.
+                                            Los números deben ir del 1 al 4.
+                                            La pregunta debe ir en una sola línea, y cada respuesta en una línea para cada una.`
+                            }
+                        ]
+                    });
+
+                    // Procesar la respuesta de OpenAI
+                    const generatedText = chatCompletion.choices[0].message.content;
+
+                    // Separar la pregunta y las respuestas
+                    const [question, ...answers] = generatedText.split('\n').filter(line => line.trim());
+                    const correctAnswer = answers.pop();
+
+                    // Preparar el objeto de pregunta generada
+                    const preguntaGenerada = {
+                        pregunta: question,
+                        respuesta_1: answers[0] || '',
+                        respuesta_2: answers[1] || '',
+                        respuesta_3: answers[2] || '',
+                        respuesta_4: answers[3] || '',
+                        respuesta_correcta: correctAnswer || ''
+                    };
+
+                    // Devolver la jerarquía y la pregunta generada
+                    res.json({ descripcion, jerarquia, pregunta: preguntaGenerada });
+                } catch (openaiError) {
+                    console.error('Error al comunicarse con OpenAI:', openaiError);
+                    res.status(500).json({ error: 'Error al generar la pregunta con OpenAI.' });
+                }
+            });
         });
     });
 });
