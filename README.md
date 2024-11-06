@@ -1,4 +1,4 @@
-# Web con React usando API de CahtGPT y base de datos Mysql
+# Web con React usando API de ChatGPT y base de datos Mysql
 
 Blog [Enlace](https://likonet.es)
 Este proyecto ha servido para explirar funcionalidades y tener código reutilizable.
